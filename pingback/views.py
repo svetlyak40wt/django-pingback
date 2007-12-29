@@ -19,6 +19,7 @@ from django.core import urlresolvers as ur
 from django.conf import settings
 from django.core.urlresolvers import get_callable
 from django.utils.html import strip_tags
+from django.utils.encoding import force_unicode, smart_str
 
 from pingback.models import Pingback
 
@@ -50,6 +51,20 @@ def handler(request):
     response['Content-Length'] = str(len(response.content))
     return response
 
+class PingbackError:
+    # The source URI does not exist.
+    SOURCE_DOES_NOT_EXIST = 0x0010
+    # The source URI does not contain a link to the target URI, and so cannot be used as a source.
+    SOURCE_DOES_NOT_LINKING = 0x0011
+    # The specified target URI does not exist.
+    TARGET_DOES_NOT_EXIST = 0x0020
+    # The specified target URI cannot be used as a target.
+    TARGET_IS_NOT_PINGABLE = 0x0021
+    # The pingback has already been registered.
+    PINGBACK_ALREADY_REGISTERED = 0x0030
+    ACCESS_DENIED = 0x0031
+    CONNECTION_ERROR = 0x0032
+
 
 def ping(source, target):
     """ Pingback server function.
@@ -73,14 +88,12 @@ def ping(source, target):
     try:
         doc = urlopen(source)
     except (HTTPError, URLError):
-        # The source URI does not exist.
-        return 0x0010
+        return PingbackError.SOURCE_DOES_NOT_EXIST
 
     soup = BeautifulSoup(doc.read())
     mylink = soup.find('a', href=target)
     if not mylink:
-        # The source URI does not contain a link to the target URI, and so cannot be used as a source.
-        return 0x0011
+        return PingbackError.SOURCE_DOES_NOT_LINKING
     # title
     title = soup.find('title').contents[0]
     title = strip_tags(unicode(title))
@@ -100,20 +113,17 @@ def ping(source, target):
     scheme, server, path, query, fragment = urlsplit(target)
 
     if not server.split(':')[0] == domain:
-        # The specified target URI cannot be used as a target.
-        return 0x0021
+        return PingbackError.TARGET_IS_NOT_PINGABLE
 
     resolver = ur.RegexURLResolver(r'^/', settings.ROOT_URLCONF)
 
     try:
         func, smth, params = resolver.resolve(path)
     except ur.Resolver404:
-        # The specified target URI does not exist.
-        return 0x0020
+        return PingbackError.TARGET_DOES_NOT_EXIST
     name = resolver.reverse_dict[func][-1].name
     if not name in settings.PINGBACK_SERVER:
-        # URL can't receive pingback
-        return 0x0021
+        return PingbackError.TARGET_IS_NOT_PINGABLE
     getter = settings.PINGBACK_SERVER[name]
     if not callable(getter):
         getter = get_callable(getter)
@@ -122,7 +132,7 @@ def ping(source, target):
     ctype = ContentType.objects.get_for_model(obj)
     try:
         Pingback.objects.get(url=source, content_type=ctype, object_id=obj.id)
-        return 0x0030
+        return PingbackError.PINGBACK_ALREADY_REGISTERED
     except Pingback.DoesNotExist:
         pass
 
