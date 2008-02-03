@@ -95,8 +95,11 @@ def ping(source, target):
     if not mylink:
         return PingbackError.SOURCE_DOES_NOT_LINKING
     # title
-    title = soup.find('title').contents[0]
-    title = strip_tags(unicode(title))
+    title = soup.find('title')
+    if title:
+        title = strip_tags(unicode(title))
+    else:
+        title = 'Unknown title'
     content = unicode(mylink.findParent())
     i = content.index(unicode(mylink))
     content = strip_tags(content)
