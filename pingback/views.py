@@ -22,7 +22,7 @@ from django.utils.html import strip_tags
 from django.utils.encoding import force_unicode, smart_str
 
 from pingback.models import Pingback
-
+from pingback.exceptions import PingbackError
 
 try:
     # Python 2.4
@@ -50,20 +50,6 @@ def handler(request):
             response.write("%s:\n    %s\n\n" % (method, help))
     response['Content-Length'] = str(len(response.content))
     return response
-
-class PingbackError:
-    # The source URI does not exist.
-    SOURCE_DOES_NOT_EXIST = 0x0010
-    # The source URI does not contain a link to the target URI, and so cannot be used as a source.
-    SOURCE_DOES_NOT_LINKING = 0x0011
-    # The specified target URI does not exist.
-    TARGET_DOES_NOT_EXIST = 0x0020
-    # The specified target URI cannot be used as a target.
-    TARGET_IS_NOT_PINGABLE = 0x0021
-    # The pingback has already been registered.
-    PINGBACK_ALREADY_REGISTERED = 0x0030
-    ACCESS_DENIED = 0x0031
-    CONNECTION_ERROR = 0x0032
 
 
 def ping(source, target):
@@ -115,7 +101,7 @@ def ping(source, target):
 
     scheme, server, path, query, fragment = urlsplit(target)
 
-    if not server.split(':')[0] == domain:
+    if not (server == domain or server.split(':')[0] == domain):
         return PingbackError.TARGET_IS_NOT_PINGABLE
 
     resolver = ur.RegexURLResolver(r'^/', settings.ROOT_URLCONF)
@@ -143,7 +129,6 @@ def ping(source, target):
     pb.save()
 
     return 'pingback from %s to %s saved' % (source, target)
-
 
 
 dispatcher.register_function(ping, 'pingback.ping')

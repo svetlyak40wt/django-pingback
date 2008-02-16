@@ -6,9 +6,10 @@ from urllib2 import urlopen
 from BeautifulSoup import BeautifulSoup
 from django.contrib.sites.models import Site
 from django.conf import settings
+from django.core.urlresolvers import reverse
 
-from pingback.models import PingbackClient
-from pingback.exceptions import PingbackNotConfigured
+from pingback.models import PingbackClient, DirectoryPing
+from pingback.exceptions import PingbackNotConfigured, PingbackError
 
 
 def callab(smth):
@@ -76,6 +77,7 @@ def ping_external_links(instance):
     soup = BeautifulSoup(content)
     links = [a['href'] for a in soup.findAll('a') if is_external(a['href'], url)]
 
+    # TODO: execute this code in the thread
     for link in links:
         if PingbackClient.objects.count_for_link(instance, link):
             continue
@@ -85,8 +87,43 @@ def ping_external_links(instance):
             server_url = f.info().get('X-Pingback', '') or search_link(f.read(512 * 1024))
             if server_url:
                 server = ServerProxy(server_url)
-                q = server.pingback.ping(url, link)
-                pingback.success = True
+                try:
+                    result = server.pingback.ping(url, link)
+                except Exception, e:
+                    pingback.success = False
+                else:
+                    pingback.success = not PingbackError.is_error(result)
         except (IOError, ValueError, Fault), e:
             pass
         pingback.save()
+
+def ping_directories(instance):
+    """Ping blog directories"""
+
+    domain = Site.objects.get_current().domain
+    ph = PingbackHelper(instance)
+    content = ph.get_content()
+    blog_name = settings.BLOG_NAME
+    blog_url = 'http://%s/' % domain
+    object_url = 'http://%s%s' % (domain, ph.get_url())
+    # TODO: cleanup generation of RSS feed and use it here instead of ATOM feed
+    # because ATOM feed is not supported well by some ugly sites
+    feed_url = 'http://%s%s' % (domain, reverse('atom_feed', args=['blog']))
+
+    #TODO: execute this code in the thread
+    for directory_url in settings.DIRECTORY_URLS:
+        ping = DirectoryPing(object=instance, url=directory_url)
+        try:
+            server = ServerProxy(directory_url)
+            try:
+                q = server.weblogUpdates.extendedPing(blog_name, blog_url, object_url, feed_url)
+            #TODO: Find out name of exception :-)
+            except Exception, ex:
+                q = server.weblogUpdates.ping(blog_name, blog_url, object_url)
+            if q.get('flerror'):
+                ping.success = False
+            else:
+                ping.success = True
+        except (IOError, ValueError, Fault), e:
+            pass
+        ping.save()
