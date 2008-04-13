@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from datetime import datetime
 from urlparse import urlsplit
 
@@ -6,7 +8,7 @@ from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 
-from pingback.managers import PingbackClientManager
+from pingback.managers import PingbackManager, PingbackClientManager
 
 
 class Pingback(models.Model):
@@ -19,6 +21,15 @@ class Pingback(models.Model):
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField()
     object = generic.GenericForeignKey('content_type', 'object_id')
+
+    objects = PingbackManager()
+
+    class Meta:
+        db_table = 'pingback'
+        ordering = ('-date', )
+
+    class Admin:
+        list_display = ('url', 'admin_object', 'date', 'approved', 'title')
 
     def __unicode__(self):
         return u'%s to %s' % (self.url, self.object)
@@ -37,13 +48,6 @@ class Pingback(models.Model):
     def admin_object(self):
         return self.object
 
-    class Meta:
-        db_table = 'pingback'
-        ordering = ('-date', )
-
-    class Admin:
-        list_display = ('url', 'admin_object', 'date', 'approved', 'title')
-
 
 class PingbackClient(models.Model):
     url = models.URLField()
@@ -56,6 +60,13 @@ class PingbackClient(models.Model):
 
     objects = PingbackClientManager()
 
+    class Meta:
+        db_table = 'pingback_client'
+        ordering = ('-date', )
+
+    class Admin:
+        list_display = ('admin_object', 'url', 'date', 'success')
+
     def __unicode__(self):
         return u'%s to %s' % (self.object, self.url)
 
@@ -63,12 +74,6 @@ class PingbackClient(models.Model):
     def admin_object(self):
         return self.object
 
-    class Meta:
-        db_table = 'pingback_client'
-        ordering = ('-date', )
-
-    class Admin:
-        list_display = ('admin_object', 'url', 'date', 'success')
 
 class DirectoryPing(models.Model):
     url = models.URLField()
@@ -81,11 +86,11 @@ class DirectoryPing(models.Model):
 
     objects = PingbackClientManager()
 
-    def __unicode__(self):
-        return u'%s to %s' % (self.object, self.url)
-
     class Meta:
         ordering = ('-date', )
 
     class Admin:
         list_display = ['url', 'date', 'success']
+
+    def __unicode__(self):
+        return u'%s to %s' % (self.object, self.url)

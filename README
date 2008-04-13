@@ -1,0 +1,10 @@
+This two applications provide 4 connected services: an XML-RPC server,
+pingback server, pingback client and directory ping client.
+
+Example of configuration of pingback server and pingback and directory ping
+clients you can see inside a `pingback-connect-example.py`.
+
+Don't forget to add this urlpattern to your urls configuration:
+
+    url(r'^xmlrpc/', include('xmlrpc.urls'))
+
