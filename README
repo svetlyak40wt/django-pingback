@@ -8,3 +8,10 @@ Don't forget to add this urlpattern to your urls configuration:
 
     url(r'^xmlrpc/', include('xmlrpc.urls'))
 
+Directories ping require configuration in settings, example:
+
+    DIRECTORY_URLS = (
+        'http://ping.blogs.yandex.ru/RPC2',
+        'http://rpc.technorati.com/rpc/ping',
+    )
+

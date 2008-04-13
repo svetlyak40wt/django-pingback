@@ -5,6 +5,7 @@ from django.db import models
 from django.dispatch import dispatcher
 
 import xmlrpc
+from pingback.client import ping_external_links, ping_directories
 from blog.models import Post
 
 
