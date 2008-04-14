@@ -61,69 +61,73 @@ def search_link(content):
     return match and match.group(1)
 
 
-def ping_external_links(instance, content_attr, url_attr):
-    """ Pingback client function.
+def ping_external_links(content_attr, url_attr):
+    def execute_ping(instance):
+        """ Pingback client function.
 
-    Arguments::
+        Arguments::
 
-     - `instance` - object, which is the source for pingbacks
-     - `content_attr` - name of attribute, which contains content with links,
-       must be HTML. Can be callable.
-     - `url_attr` - name of attribute, which contains url of object. Can be
-       callable.
+         - `instance` - object, which is the source for pingbacks
+         - `content_attr` - name of attribute, which contains content with links,
+           must be HTML. Can be callable.
+         - `url_attr` - name of attribute, which contains url of object. Can be
+           callable.
 
-    Credits go to Ivan Sagalaev.
-    """
-    domain = Site.objects.get_current().domain
-    content = callab(getattr(instance, content_attr))
-    url = 'http://%s%s' % (domain, callab(getattr(instance, url_attr)))
+        Credits go to Ivan Sagalaev.
+        """
+        domain = Site.objects.get_current().domain
+        content = callab(getattr(instance, content_attr))
+        url = 'http://%s%s' % (domain, callab(getattr(instance, url_attr)))
 
-    def is_external(external, url):
-        path_e = urlsplit(external)[2]
-        path_i = urlsplit(url)[2]
-        return path_e != path_i
+        def is_external(external, url):
+            path_e = urlsplit(external)[2]
+            path_i = urlsplit(url)[2]
+            return path_e != path_i
 
-    soup = BeautifulSoup(content)
-    links = [a['href'] for a in soup.findAll('a') if is_external(a['href'], url)]
+        soup = BeautifulSoup(content)
+        links = [a['href'] for a in soup.findAll('a') if is_external(a['href'], url)]
 
-    pbt = PingBackThread(instance=instance, url=url, links=links)
-    pbt.start()
+        pbt = PingBackThread(instance=instance, url=url, links=links)
+        pbt.start()
+    return execute_ping
 
 
-def ping_directories(instance, content_attr, url_attr):
-    """Ping blog directories
+def ping_directories(content_attr, url_attr):
+    def execute_ping(instance):
+        """Ping blog directories
 
-    Arguments::
+        Arguments::
 
-     - `instance` - object, which is the source for pingbacks
-     - `content_attr` - name of attribute, which contains content with links,
-       must be HTML. Can be callable.
-     - `url_attr` - name of attribute, which contains url of object. Can be
-       callable.
-    """
-    domain = Site.objects.get_current().domain
-    content = callab(getattr(instance, content_attr))
-    blog_name = settings.BLOG_NAME
-    blog_url = 'http://%s/' % domain
-    object_url = 'http://%s%s' % (domain, callab(getattr(instance, url_attr)))
-    # TODO: cleanup generation of RSS feed and use it here instead of ATOM feed
-    # because ATOM feed is not supported well by some ugly sites
-    feed_url = 'http://%s%s' % (domain, reverse('atom_feed', args=['blog']))
+        - `instance` - object, which is the source for pingbacks
+        - `content_attr` - name of attribute, which contains content with links,
+        must be HTML. Can be callable.
+        - `url_attr` - name of attribute, which contains url of object. Can be
+        callable.
+        """
+        domain = Site.objects.get_current().domain
+        content = callab(getattr(instance, content_attr))
+        blog_name = settings.BLOG_NAME
+        blog_url = 'http://%s/' % domain
+        object_url = 'http://%s%s' % (domain, callab(getattr(instance, url_attr)))
+        # TODO: cleanup generation of RSS feed and use it here instead of ATOM feed
+        # because ATOM feed is not supported well by some ugly sites
+        feed_url = 'http://%s%s' % (domain, reverse('atom_feed', args=['blog']))
 
-    #TODO: execute this code in the thread
-    for directory_url in settings.DIRECTORY_URLS:
-        ping = DirectoryPing(object=instance, url=directory_url)
-        try:
-            server = ServerProxy(directory_url)
+        #TODO: execute this code in the thread
+        for directory_url in settings.DIRECTORY_URLS:
+            ping = DirectoryPing(object=instance, url=directory_url)
             try:
-                q = server.weblogUpdates.extendedPing(blog_name, blog_url, object_url, feed_url)
-            #TODO: Find out name of exception :-)
-            except Exception, ex:
-                q = server.weblogUpdates.ping(blog_name, blog_url, object_url)
-            if q.get('flerror'):
-                ping.success = False
-            else:
-                ping.success = True
-        except (IOError, ValueError, Fault), e:
-            pass
-        ping.save()
+                server = ServerProxy(directory_url)
+                try:
+                    q = server.weblogUpdates.extendedPing(blog_name, blog_url, object_url, feed_url)
+                #TODO: Find out name of exception :-)
+                except Exception, ex:
+                    q = server.weblogUpdates.ping(blog_name, blog_url, object_url)
+                if q.get('flerror'):
+                    ping.success = False
+                else:
+                    ping.success = True
+            except (IOError, ValueError, Fault), e:
+                pass
+            ping.save()
+    return execute_ping

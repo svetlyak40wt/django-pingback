@@ -20,7 +20,7 @@ xmlrpc.dispatcher.register_function(pingback.create_ping_func(**ping_details), '
 
 
 # Connecting client signals
-dispatcher.connect(ping_external_links, signal=models.signals.post_save, sender=Post,
-                   content_attr='html', url_attr='get_absolute_url')
-dispatcher.connect(ping_directories, signal=models.signals.post_save, sender=Post,
-                   content_attr='html', url_attr='get_absolute_url')
+dispatcher.connect(ping_external_links(content_attr='html', url_attr='get_absolute_url'),
+                   signal=models.signals.post_save, sender=Post)
+dispatcher.connect(ping_directories(content_attr='html', url_attr='get_absolute_url'),
+                   signal=models.signals.post_save, sender=Post)
