@@ -15,8 +15,10 @@ from django.utils.encoding import force_unicode, smart_str
 
 from pingback.models import Pingback
 
+
 class PingbackNotConfigured(Exception):
     pass
+
 
 class PingbackError(Exception):
     """
@@ -41,6 +43,7 @@ class PingbackError(Exception):
     def is_error(cls, value):
         return value in [ 0x0010, 0x0011,  0x0020, 0x0021, 0x0030, 0x0031, 0x0032 ]
     is_error = classmethod(is_error)
+
 
 def create_ping_func(**kwargs):
     """

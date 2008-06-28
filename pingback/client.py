@@ -49,7 +49,7 @@ class PingBackThread(threading.Thread):
         socket.setdefaulttimeout(None)
 
 
-def callab(smth):
+def maybe_call(smth):
     if callable(smth):
         return smth()
     else:
@@ -76,8 +76,8 @@ def ping_external_links(content_attr, url_attr):
         Credits go to Ivan Sagalaev.
         """
         domain = Site.objects.get_current().domain
-        content = callab(getattr(instance, content_attr))
-        url = 'http://%s%s' % (domain, callab(getattr(instance, url_attr)))
+        content = maybe_call(getattr(instance, content_attr))
+        url = 'http://%s%s' % (domain, maybe_call(getattr(instance, url_attr)))
 
         def is_external(external, url):
             path_e = urlsplit(external)[2]
@@ -105,13 +105,11 @@ def ping_directories(content_attr, url_attr):
         callable.
         """
         domain = Site.objects.get_current().domain
-        content = callab(getattr(instance, content_attr))
+        content = maybe_call(getattr(instance, content_attr))
         blog_name = settings.BLOG_NAME
         blog_url = 'http://%s/' % domain
-        object_url = 'http://%s%s' % (domain, callab(getattr(instance, url_attr)))
-        # TODO: cleanup generation of RSS feed and use it here instead of ATOM feed
-        # because ATOM feed is not supported well by some ugly sites
-        feed_url = 'http://%s%s' % (domain, reverse('atom_feed', args=['blog']))
+        object_url = 'http://%s%s' % (domain, maybe_call(getattr(instance, url_attr)))
+        feed_url = 'http://%s%s' % (domain, reverse('feed', args=['blog']))
 
         #TODO: execute this code in the thread
         for directory_url in settings.DIRECTORY_URLS:

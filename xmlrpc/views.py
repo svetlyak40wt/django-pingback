@@ -4,6 +4,7 @@ from django.http import HttpResponse
 
 from xmlrpc import dispatcher
 
+
 def xmlrpc_handler(request):
     """
     XML-RPC handler.
