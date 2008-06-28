@@ -6,6 +6,7 @@ from django.dispatch import dispatcher
 
 import xmlrpc
 from pingback.client import ping_external_links, ping_directories
+from pingback import create_ping_func
 from blog.models import Post
 
 
@@ -16,7 +17,7 @@ def pingback_blog_handler(year, month, day, slug, **kwargs):
 
 ping_details = {'post_detail': pingback_blog_handler}
 
-xmlrpc.dispatcher.register_function(pingback.create_ping_func(**ping_details), 'pingback.ping')
+xmlrpc.dispatcher.register_function(create_ping_func(**ping_details), 'pingback.ping')
 
 
 # Connecting client signals
