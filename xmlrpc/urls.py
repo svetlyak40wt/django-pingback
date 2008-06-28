@@ -2,7 +2,9 @@
 
 from django.conf.urls.defaults import *
 
+from xmlrpc import views
+
 urlpatterns = patterns(
     '',
-    url(r'^$', 'xmlrpc.views.xmlrpc_handler', name="xmlrpc"),
+    url(r'^$', views.xmlrpc_handler, name="xmlrpc"),
 )
