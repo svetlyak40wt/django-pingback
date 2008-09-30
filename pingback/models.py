@@ -28,9 +28,6 @@ class Pingback(models.Model):
         db_table = 'pingback'
         ordering = ('-date', )
 
-    class Admin:
-        list_display = ('url', 'admin_object', 'date', 'approved', 'title')
-
     def __unicode__(self):
         return u'%s to %s' % (self.url, self.object)
 
@@ -64,9 +61,6 @@ class PingbackClient(models.Model):
         db_table = 'pingback_client'
         ordering = ('-date', )
 
-    class Admin:
-        list_display = ('admin_object', 'url', 'date', 'success')
-
     def __unicode__(self):
         return u'%s to %s' % (self.object, self.url)
 
@@ -88,9 +82,6 @@ class DirectoryPing(models.Model):
 
     class Meta:
         ordering = ('-date', )
-
-    class Admin:
-        list_display = ['url', 'date', 'success']
 
     def __unicode__(self):
         return u'%s to %s' % (self.object, self.url)

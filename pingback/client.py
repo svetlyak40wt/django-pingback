@@ -1,6 +1,6 @@
 import re
 from urlparse import urlsplit
-from xmlrpclib import ServerProxy, Fault
+from xmlrpclib import ServerProxy, Fault, ProtocolError
 from urllib2 import urlopen
 import socket
 import threading
@@ -61,20 +61,22 @@ def search_link(content):
     return match and match.group(1)
 
 
-def ping_external_links(content_attr, url_attr):
-    def execute_ping(instance):
-        """ Pingback client function.
+def ping_external_links(content_attr, url_attr, filtr=lambda x: True):
+    """ Pingback client function.
 
-        Arguments::
+    Arguments::
 
-         - `instance` - object, which is the source for pingbacks
-         - `content_attr` - name of attribute, which contains content with links,
-           must be HTML. Can be callable.
-         - `url_attr` - name of attribute, which contains url of object. Can be
-           callable.
+    - `content_attr` - name of attribute, which contains content with links,
+    must be HTML. Can be callable.
+    - `url_attr` - name of attribute, which contains url of object. Can be
+    callable.
+    - `filtr` - function to filter out instances. False will interrupt ping.
 
-        Credits go to Ivan Sagalaev.
-        """
+    Credits go to Ivan Sagalaev.
+    """
+    def execute_links_ping(instance, **kwargs):
+        if not filtr(instance):
+            return
         domain = Site.objects.get_current().domain
         content = maybe_call(getattr(instance, content_attr))
         url = 'http://%s%s' % (domain, maybe_call(getattr(instance, url_attr)))
@@ -89,21 +91,23 @@ def ping_external_links(content_attr, url_attr):
 
         pbt = PingBackThread(instance=instance, url=url, links=links)
         pbt.start()
-    return execute_ping
+    return execute_links_ping
 
 
-def ping_directories(content_attr, url_attr):
-    def execute_ping(instance):
-        """Ping blog directories
+def ping_directories(content_attr, url_attr, filtr=lambda x: True):
+    """Ping blog directories
 
-        Arguments::
+    Arguments::
 
-        - `instance` - object, which is the source for pingbacks
-        - `content_attr` - name of attribute, which contains content with links,
-        must be HTML. Can be callable.
-        - `url_attr` - name of attribute, which contains url of object. Can be
-        callable.
-        """
+    - `content_attr` - name of attribute, which contains content with links,
+    must be HTML. Can be callable.
+    - `url_attr` - name of attribute, which contains url of object. Can be
+    callable.
+    - `filtr` - function to filter out instances. False will interrupt ping.
+    """
+    def execute_dirs_ping(instance, **kwargs):
+        if not filtr(instance):
+            return
         domain = Site.objects.get_current().domain
         content = maybe_call(getattr(instance, content_attr))
         blog_name = settings.BLOG_NAME
@@ -120,7 +124,12 @@ def ping_directories(content_attr, url_attr):
                     q = server.weblogUpdates.extendedPing(blog_name, blog_url, object_url, feed_url)
                 #TODO: Find out name of exception :-)
                 except Exception, ex:
-                    q = server.weblogUpdates.ping(blog_name, blog_url, object_url)
+                    try:
+                        q = server.weblogUpdates.ping(blog_name, blog_url, object_url)
+                    except ProtocolError:
+                        ping.success = False
+                        ping.save()
+                        return execute_dirs_ping
                 if q.get('flerror'):
                     ping.success = False
                 else:
@@ -128,4 +137,4 @@ def ping_directories(content_attr, url_attr):
             except (IOError, ValueError, Fault), e:
                 pass
             ping.save()
-    return execute_ping
+    return execute_dirs_ping

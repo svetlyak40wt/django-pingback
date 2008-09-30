@@ -24,6 +24,6 @@ class PingbackError(Exception):
     def __init__(self, error_code):
         self.error_code = error_code
 
+    @classmethod
     def is_error(cls, value):
         return value in [ 0x0010, 0x0011,  0x0020, 0x0021, 0x0030, 0x0031, 0x0032 ]
-    is_error = classmethod(is_error)
