@@ -77,9 +77,12 @@ def ping_external_links(content_attr, url_attr, filtr=lambda x: True):
     def execute_links_ping(instance, **kwargs):
         if not filtr(instance):
             return
-        domain = Site.objects.get_current().domain
         content = maybe_call(getattr(instance, content_attr))
-        url = 'http://%s%s' % (domain, maybe_call(getattr(instance, url_attr)))
+        url = maybe_call(getattr(instance, url_attr))
+        if not url.startswith('http://') or url.startswith('https://'):
+            domain = Site.objects.get_current().domain
+            url = '%s://%s%s' % (getattr(settings, 'SITE_PROTOCOL', 'http'),
+                                 domain, url)
 
         def is_external(external, url):
             path_e = urlsplit(external)[2]
