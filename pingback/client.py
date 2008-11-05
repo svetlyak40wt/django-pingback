@@ -79,7 +79,7 @@ def ping_external_links(content_attr, url_attr, filtr=lambda x: True):
             return
         content = maybe_call(getattr(instance, content_attr))
         url = maybe_call(getattr(instance, url_attr))
-        if not url.startswith('http://') or url.startswith('https://'):
+        if not (url.startswith('http://') or url.startswith('https://')):
             domain = Site.objects.get_current().domain
             url = '%s://%s%s' % (getattr(settings, 'SITE_PROTOCOL', 'http'),
                                  domain, url)
@@ -97,7 +97,8 @@ def ping_external_links(content_attr, url_attr, filtr=lambda x: True):
     return execute_links_ping
 
 
-def ping_directories(content_attr, url_attr, filtr=lambda x: True):
+def ping_directories(content_attr, url_attr, filtr=lambda x: True,
+                     feed_url_fun=lambda x: reverse('feed', args=['blog'])):
     """Ping blog directories
 
     Arguments::
@@ -107,16 +108,23 @@ def ping_directories(content_attr, url_attr, filtr=lambda x: True):
     - `url_attr` - name of attribute, which contains url of object. Can be
     callable.
     - `filtr` - function to filter out instances. False will interrupt ping.
+    - `feed_url_fun` - function to find feed url
     """
     def execute_dirs_ping(instance, **kwargs):
         if not filtr(instance):
             return
-        domain = Site.objects.get_current().domain
-        content = maybe_call(getattr(instance, content_attr))
         blog_name = settings.BLOG_NAME
-        blog_url = 'http://%s/' % domain
-        object_url = 'http://%s%s' % (domain, maybe_call(getattr(instance, url_attr)))
-        feed_url = 'http://%s%s' % (domain, reverse('feed', args=['blog']))
+        content = maybe_call(getattr(instance, content_attr))
+        protocol = getattr(settings, 'SITE_PROTOCOL', 'http')
+        url = maybe_call(getattr(instance, url_attr))
+        feed_url = feed_url_fun(instance)
+        if (url.startswith('http://') or url.startswith('https://')):
+            domain = url.split('://')[1].split('/', 1)[0]
+        else:
+            domain = Site.objects.get_current().domain
+            url = '%s://%s%s' % (protocol, domain, url)
+        feed_url = '%s://%s%s' % (protocol, domain, feed_url)
+        blog_url = '%s://%s/' % (protocol, domain)
 
         #TODO: execute this code in the thread
         for directory_url in settings.DIRECTORY_URLS:
@@ -124,11 +132,11 @@ def ping_directories(content_attr, url_attr, filtr=lambda x: True):
             try:
                 server = ServerProxy(directory_url)
                 try:
-                    q = server.weblogUpdates.extendedPing(blog_name, blog_url, object_url, feed_url)
+                    q = server.weblogUpdates.extendedPing(blog_name, blog_url, url, feed_url)
                 #TODO: Find out name of exception :-)
                 except Exception, ex:
                     try:
-                        q = server.weblogUpdates.ping(blog_name, blog_url, object_url)
+                        q = server.weblogUpdates.ping(blog_name, blog_url, url)
                     except ProtocolError:
                         ping.success = False
                         ping.save()
