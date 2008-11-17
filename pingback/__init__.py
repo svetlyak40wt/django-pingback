@@ -7,7 +7,7 @@ from BeautifulSoup import BeautifulSoup
 
 from django.contrib.sites.models import Site
 from django.contrib.contenttypes.models import ContentType
-from django.core import urlresolvers
+from django.core.urlresolvers import get_resolver
 from django.conf import settings
 from django.core.urlresolvers import get_callable
 from django.utils.html import strip_tags
@@ -76,19 +76,24 @@ def create_ping_func(**kwargs):
         if not (server == domain or server.split(':')[0] == domain):
             return PingbackError.TARGET_IS_NOT_PINGABLE
 
-        resolver = urlresolvers.RegexURLResolver(r'^/', settings.ROOT_URLCONF)
+        resolver = get_resolver(None)
 
         try:
-            func, smth, params = resolver.resolve(path)
+            func, a, kw = resolver.resolve(path)
         except urlresolvers.Resolver404:
             raise PingbackError(PingbackError.TARGET_DOES_NOT_EXIST)
 
-        name = resolver.reverse_dict[func][-1].name
-        if name not in kwargs:
+        url_signature = resolver.reverse_dict[func]
+        # stupid workaround because django returns tuple instead of RegexURLPattern
+        registered = False
+        for name in kwargs:
+            if resolver.reverse_dict[name] == url_signature:
+                registered = True
+        if not registered:
             raise PingbackError(PingbackError.TARGET_IS_NOT_PINGABLE)
 
         object_resolver = kwargs[name]
-        obj = object_resolver(**params)
+        obj = object_resolver(**kw)
 
         content_type = ContentType.objects.get_for_model(obj)
         try:
