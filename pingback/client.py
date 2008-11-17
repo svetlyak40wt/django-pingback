@@ -64,25 +64,25 @@ def search_link(content):
 def ping_external_links(content_attr, url_attr, filtr=lambda x: True):
     """ Pingback client function.
 
-    Arguments::
+    Arguments:
 
-    - `content_attr` - name of attribute, which contains content with links,
-    must be HTML. Can be callable.
-    - `url_attr` - name of attribute, which contains url of object. Can be
-    callable.
-    - `filtr` - function to filter out instances. False will interrupt ping.
+      - `content_attr` - name of attribute, which contains content with links,
+        must be HTML. Can be callable.
+      - `url_attr` - name of attribute, which contains url of object. Can be
+        callable.
+      - `filtr` - function to filter out instances. False will interrupt ping.
 
     Credits go to Ivan Sagalaev.
     """
     def execute_links_ping(instance, **kwargs):
         if not filtr(instance):
             return
+        site = getattr(instance, 'site', Site.objects.get_current())
         content = maybe_call(getattr(instance, content_attr))
         url = maybe_call(getattr(instance, url_attr))
         if not (url.startswith('http://') or url.startswith('https://')):
-            domain = Site.objects.get_current().domain
             url = '%s://%s%s' % (getattr(settings, 'SITE_PROTOCOL', 'http'),
-                                 domain, url)
+                                 site.domain, url)
 
         def is_external(external, url):
             path_e = urlsplit(external)[2]
@@ -101,28 +101,24 @@ def ping_directories(content_attr, url_attr, filtr=lambda x: True,
                      feed_url_fun=lambda x: reverse('feed', args=['blog'])):
     """Ping blog directories
 
-    Arguments::
+    Arguments:
 
-    - `content_attr` - name of attribute, which contains content with links,
-    must be HTML. Can be callable.
-    - `url_attr` - name of attribute, which contains url of object. Can be
-    callable.
-    - `filtr` - function to filter out instances. False will interrupt ping.
-    - `feed_url_fun` - function to find feed url
+      - `content_attr` - name of attribute, which contains content with links,
+        must be HTML. Can be callable.
+      - `url_attr` - name of attribute, which contains url of object. Can be
+        callable.
+      - `filtr` - function to filter out instances. False will interrupt ping.
+      - `feed_url_fun` - function to find feed url
     """
     def execute_dirs_ping(instance, **kwargs):
         if not filtr(instance):
             return
-        blog_name = settings.BLOG_NAME
+        site = getattr(instance, 'site', Site.objects.get_current())
         content = maybe_call(getattr(instance, content_attr))
         protocol = getattr(settings, 'SITE_PROTOCOL', 'http')
         url = maybe_call(getattr(instance, url_attr))
         feed_url = feed_url_fun(instance)
-        if (url.startswith('http://') or url.startswith('https://')):
-            domain = url.split('://')[1].split('/', 1)[0]
-        else:
-            domain = Site.objects.get_current().domain
-            url = '%s://%s%s' % (protocol, domain, url)
+        domain = site.domain
         feed_url = '%s://%s%s' % (protocol, domain, feed_url)
         blog_url = '%s://%s/' % (protocol, domain)
 
@@ -132,11 +128,11 @@ def ping_directories(content_attr, url_attr, filtr=lambda x: True,
             try:
                 server = ServerProxy(directory_url)
                 try:
-                    q = server.weblogUpdates.extendedPing(blog_name, blog_url, url, feed_url)
+                    q = server.weblogUpdates.extendedPing(site.name, blog_url, url, feed_url)
                 #TODO: Find out name of exception :-)
                 except Exception, ex:
                     try:
-                        q = server.weblogUpdates.ping(blog_name, blog_url, url)
+                        q = server.weblogUpdates.ping(site.name, blog_url, url)
                     except ProtocolError:
                         ping.success = False
                         ping.save()
