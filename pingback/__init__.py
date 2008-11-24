@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging
 from urlparse import urlsplit
 from urllib2 import urlopen, HTTPError, URLError
 
@@ -35,6 +36,8 @@ def create_ping_func(**kwargs):
     """
 
     def ping_func(source, target):
+        log = logging.getLogger('pingback')
+        log.debug('received pingback from %r to %r' % (source, target))
         domain = Site.objects.get_current().domain
 
         # fetch the source request, then check if it really pings the target.
@@ -83,12 +86,13 @@ def create_ping_func(**kwargs):
         except urlresolvers.Resolver404:
             raise PingbackError(PingbackError.TARGET_DOES_NOT_EXIST)
 
-        url_signature = resolver.reverse_dict[func]
+        url_signatures = resolver.reverse_dict.getlist(func)
         # stupid workaround because django returns tuple instead of RegexURLPattern
         registered = False
         for name in kwargs:
-            if resolver.reverse_dict[name] == url_signature:
+            if resolver.reverse_dict[name] in url_signatures:
                 registered = True
+                break
         if not registered:
             raise PingbackError(PingbackError.TARGET_IS_NOT_PINGABLE)
 

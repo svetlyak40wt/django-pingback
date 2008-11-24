@@ -4,6 +4,7 @@ from xmlrpclib import ServerProxy, Fault, ProtocolError
 from urllib2 import urlopen
 import socket
 import threading
+import logging
 
 from BeautifulSoup import BeautifulSoup
 from django.contrib.sites.models import Site
@@ -13,7 +14,6 @@ from django.core.urlresolvers import reverse
 
 from pingback.models import PingbackClient, DirectoryPing
 from pingback.exceptions import PingbackNotConfigured, PingbackError
-
 
 class PingBackThread(threading.Thread):
     def __init__(self, instance, url, links):
@@ -61,24 +61,37 @@ def search_link(content):
     return match and match.group(1)
 
 
-def ping_external_links(content_attr, url_attr, filtr=lambda x: True):
+def ping_external_links(content_attr=None,
+                        content_func=None,
+                        url_attr='get_absolute_url',
+                        filtr=lambda x: True):
     """ Pingback client function.
 
     Arguments:
 
       - `content_attr` - name of attribute, which contains content with links,
         must be HTML. Can be callable.
+      - `content_func` - function or unbound method, which can generate HTML
+        from an instance.
       - `url_attr` - name of attribute, which contains url of object. Can be
         callable.
       - `filtr` - function to filter out instances. False will interrupt ping.
 
     Credits go to Ivan Sagalaev.
     """
+    assert(content_attr or content_func)
+
     def execute_links_ping(instance, **kwargs):
+        log = logging.getLogger('pingback')
+        log.debug('pinging links')
+
         if not filtr(instance):
             return
         site = getattr(instance, 'site', Site.objects.get_current())
-        content = maybe_call(getattr(instance, content_attr))
+        if content_attr is None:
+            content = content_func(instance)
+        else:
+            content = maybe_call(getattr(instance, content_attr))
         url = maybe_call(getattr(instance, url_attr))
         if not (url.startswith('http://') or url.startswith('https://')):
             url = '%s://%s%s' % (getattr(settings, 'SITE_PROTOCOL', 'http'),
@@ -92,12 +105,16 @@ def ping_external_links(content_attr, url_attr, filtr=lambda x: True):
         soup = BeautifulSoup(content)
         links = [a['href'] for a in soup.findAll('a') if is_external(a['href'], url)]
 
+        log.debug('URL %s, pinging all these links: %r' % (url, links))
         pbt = PingBackThread(instance=instance, url=url, links=links)
         pbt.start()
     return execute_links_ping
 
 
-def ping_directories(content_attr, url_attr, filtr=lambda x: True,
+def ping_directories(content_attr=None,
+                     content_func=None,
+                     url_attr='get_absolute_url',
+                     filtr=lambda x: True,
                      feed_url_fun=lambda x: reverse('feed', args=['blog'])):
     """Ping blog directories
 
@@ -105,16 +122,26 @@ def ping_directories(content_attr, url_attr, filtr=lambda x: True,
 
       - `content_attr` - name of attribute, which contains content with links,
         must be HTML. Can be callable.
+      - `content_func` - function or unbound method, which can generate HTML
+        from an instance.
       - `url_attr` - name of attribute, which contains url of object. Can be
         callable.
       - `filtr` - function to filter out instances. False will interrupt ping.
       - `feed_url_fun` - function to find feed url
     """
+    assert(content_attr or content_func)
+
     def execute_dirs_ping(instance, **kwargs):
+        log = logging.getLogger('pingback')
+        log.debug('pinging directories')
+
         if not filtr(instance):
             return
         site = getattr(instance, 'site', Site.objects.get_current())
-        content = maybe_call(getattr(instance, content_attr))
+        if content_attr is None:
+            content = content_func(instance)
+        else:
+            content = maybe_call(getattr(instance, content_attr))
         protocol = getattr(settings, 'SITE_PROTOCOL', 'http')
         url = maybe_call(getattr(instance, url_attr))
         feed_url = feed_url_fun(instance)
@@ -124,6 +151,8 @@ def ping_directories(content_attr, url_attr, filtr=lambda x: True,
 
         #TODO: execute this code in the thread
         for directory_url in settings.DIRECTORY_URLS:
+            log.debug('pinging directory %r' % directory_url)
+
             ping = DirectoryPing(object=instance, url=directory_url)
             try:
                 server = ServerProxy(directory_url)
@@ -141,7 +170,7 @@ def ping_directories(content_attr, url_attr, filtr=lambda x: True,
                     ping.success = False
                 else:
                     ping.success = True
-            except (IOError, ValueError, Fault), e:
+            except (IOError, ValueError, Fault, socket.error), e:
                 pass
             ping.save()
     return execute_dirs_ping
