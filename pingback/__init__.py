@@ -18,6 +18,9 @@ from pingback.models import Pingback
 from pingback.exceptions import PingbackError
 from pingback.client import ping_external_links, ping_directories
 
+VERSION = (0, 1, 0)
+__version__ = '.'.join(map(str, VERSION))
+
 __all__ = ['Pingback', 'ping_external_links', 'ping_directories',
            'create_ping_func']
 
