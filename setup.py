@@ -22,7 +22,7 @@ setup(
         'Programming Language :: Python',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    packages = find_packages(exclude=['xmlrpc']),
+    packages = find_packages(),
     include_package_data = True,
 )
 
