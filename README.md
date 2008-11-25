@@ -8,10 +8,21 @@ It depends on the [django-xmlrpc][].
 Configuration
 -------------
 
-First, install the [django-xmlrpc][] app.
+First, install the [django-xmlrpc][] app. You download it
+from [my bzr repository][django-xmlrpc] (it based on the
+https://launchpad.net/django-xmlrpc with minor changes
+for setuptools packaging), or just use setuptools:
 
-Next, add `pingback` to your `INSTALLED_APPS`, run
-`./manage.py syncdb` and follow these instructions.
+    easy_install -f http://pypi.aartemenko.com django-xmlrpc
+
+Next, download and install `django-pingback`:
+
+* download sources from [my branch at github][github-pingback]
+  (this version is based on [Alexander Solovyov's][piranha-version] code).
+* or use `easy_install -f http://pypi.aartemenko.com django-pingback`
+* add `pingback` to your `INSTALLED_APPS`
+* run `./manage.py syncdb`
+* setup client and server callbacks.
 
 
 Connecting server
@@ -140,4 +151,6 @@ To show pingbacks on your page, you can use code like this:
 Also, for can use `{% get_pingback_count for object as cnt %}`, to save
 pingbacks' count in the context variable.
 
-
+[django-xmlrpc]: https://code.launchpad.net/~aartemenko/django-xmlrpc/svetlyak40wt
+[github-pingback]: http://github.com/svetlyak40wt/django-pingback/tree/svetlyak40wt
+[piranha-version]: http://hg.piranha.org.ua/django-pingback/
