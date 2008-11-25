@@ -3,26 +3,24 @@ django-pingback
 
 This two applications provide 3 connected services:
 pingback server, pingback client and directory ping client.
-It depends on the [django-xmlrpc][].
+
+Depends on the [django-xmlrpc][].
 
 Configuration
 -------------
 
-First, install the [django-xmlrpc][] app. You download it
-from [my bzr repository][django-xmlrpc] (it based on the
-https://launchpad.net/django-xmlrpc with minor changes
-for setuptools packaging), or just use setuptools:
+First, install the [django-xmlrpc][] application. You can download it either
+from [repo][django-xmlrpc] or just use setuptools:
 
     easy_install -f http://pypi.aartemenko.com django-xmlrpc
 
 Next, download and install `django-pingback`:
 
-* download sources from [my branch at github][github-pingback]
-  (this version is based on [Alexander Solovyov's][piranha-version] code).
-* or use `easy_install -f http://pypi.aartemenko.com django-pingback`
-* add `pingback` to your `INSTALLED_APPS`
-* run `./manage.py syncdb`
-* setup client and server callbacks.
+ * download sources from main [repository][django-pingback]
+ * or use `easy_install django-pingback`
+ * add `pingback` to your `INSTALLED_APPS`
+ * run `./manage.py syncdb`
+ * setup client and server callbacks.
 
 
 Connecting server
@@ -38,20 +36,20 @@ But first of all, add this urlpattern to your urls configuration:
 It is a handler for all xmlrpc requests.
 
 Usually, blog has a detailed view for each post. Suppose that
-out view has name `post_detail` and accepts one keyword arguments
+our view has name `post_detail` and accepts one keyword arguments
 `slug`.
 
 Here is simple example, how to make Post objects pingable:
 
     from datetime import time, date, datetime
     from time import strptime
+
     from blog.models import Post
     from pingback import create_ping_func
     from django_xmlrpc import xmlrpcdispatcher
 
-    # create simple function which returns
-    # Post object and accepts exactly same
-    # arguments as 'details' view.
+    # create simple function which returns Post object and accepts
+    # exactly same arguments as 'details' view.
     def pingback_blog_handler(slug, **kwargs):
         return Post.objects.get(slug=slug)
 
@@ -104,6 +102,7 @@ functions:
     from django.db.models import signals
     from pingback.client import ping_external_links, ping_directories
     from blog.models import Post
+
     signals.post_save.connect(
             ping_external_links(content_attr = 'html',
                                 url_attr = 'get_absolute_url'),
@@ -114,18 +113,18 @@ functions:
                              url_attr = 'get_absolute_url'),
             sender = Post, weak = False)
 
-Please, note, that in the content_attr you must give either attr's or
-method's name, which returns HTML content of the object.
+Please note, that in the `content_attr` you must give either attribute or method
+name, which returns HTML content of the object.
 
-If you don't have such attr or method, for example if you apply
-markdown filter in the template, then `content_func` attr can be used
-instead of the `content_attr`.
+If you don't have such attribute or method, for example if you apply markdown
+filter in the template, then `content_func` argument can be used instead of the
+`content_attr`.
 
-`content_func` also must return HTML, but it accepts an instance as it's
-single argument.
+`content_func` must return HTML, and must accepts an instance as a single
+argument.
 
-Pay attention to the `weak = False` attribute. If you forget about it,
-django's event dispatcher remove you signal handler.
+Pay attention to the `weak = False` argument. If case of omitting django's event
+dispatcher will remove your signal.
 
 Template tags
 -------------
@@ -148,9 +147,8 @@ To show pingbacks on your page, you can use code like this:
         {% endfor %}
     {% endif %}
 
-Also, for can use `{% get_pingback_count for object as cnt %}`, to save
+Also you can use `{% get_pingback_count for object as cnt %}`, to save
 pingbacks' count in the context variable.
 
 [django-xmlrpc]: https://code.launchpad.net/~aartemenko/django-xmlrpc/svetlyak40wt
-[github-pingback]: http://github.com/svetlyak40wt/django-pingback/tree/svetlyak40wt
-[piranha-version]: http://hg.piranha.org.ua/django-pingback/
+[django-pingback]: http://hg.piranha.org.ua/django-pingback/
