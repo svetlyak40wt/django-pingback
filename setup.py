@@ -8,8 +8,6 @@ setup(
     license = 'New BSD License',
     author = 'Alexander Solovyov',
     author_email = 'piranha@piranha.org.ua',
-    maintainer = 'Alexander Artemenko',
-    maintainer_email = 'svetlyak.40wt@gmail.com',
     url = 'http://code.google.com/p/django-pingback/',
     install_requires = ['django-xmlrpc>=0.1.0'],
     dependency_links = ['http://pypi.aartemenko.com'],
