@@ -137,7 +137,7 @@ To show pingbacks on your page, you can use code like this:
         {% endfor %}
     {% endif %}
 
-Also, for can use `{% get_pingback_count for object as cnt %}, to save
+Also, for can use `{% get_pingback_count for object as cnt %}`, to save
 pingbacks' count in the context variable.
 
 
