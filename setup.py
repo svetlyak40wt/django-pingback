@@ -8,9 +8,7 @@ setup(
     license = 'New BSD License',
     author = 'Alexander Solovyov',
     author_email = 'piranha@piranha.org.ua',
-    maintainer = 'Alexander Artemenko',
-    maintainer_email = 'svetlyak.40wt@gmail.com',
-    url = 'http://code.google.com/p/django-pingback/',
+    url = 'http://hg.piranha.org.ua/django-pingback/',
     install_requires = ['django-xmlrpc>=0.1.0'],
     dependency_links = ['http://pypi.aartemenko.com'],
     classifiers=[
@@ -22,7 +20,8 @@ setup(
         'Programming Language :: Python',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    packages = find_packages(exclude=['xmlrpc']),
+    description = 'Pingback client and server for Django web framework, extracted from Byteflow blog engine.',
+    packages = find_packages(),
     include_package_data = True,
 )
 
