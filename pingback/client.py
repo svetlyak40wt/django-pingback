@@ -2,6 +2,7 @@ import re
 from urlparse import urlsplit
 from xmlrpclib import ServerProxy, Fault, ProtocolError
 from urllib2 import urlopen
+from urlparse import urljoin
 import socket
 import threading
 import logging
@@ -148,6 +149,7 @@ def ping_directories(content_attr=None,
         domain = site.domain
         feed_url = '%s://%s%s' % (protocol, domain, feed_url)
         blog_url = '%s://%s/' % (protocol, domain)
+        url = urljoin(blog_url, url)
 
         #TODO: execute this code in the thread
         for directory_url in settings.DIRECTORY_URLS:
@@ -162,15 +164,17 @@ def ping_directories(content_attr=None,
                 except Exception, ex:
                     try:
                         q = server.weblogUpdates.ping(site.name, blog_url, url)
-                    except ProtocolError:
+                    except ProtocolError, e:
+                        log.exception('protocol error during directory ping %r' % directory_url)
                         ping.success = False
                         ping.save()
                         return execute_dirs_ping
                 if q.get('flerror'):
                     ping.success = False
+                    log.error('flerror: %s' % q.get('message', 'no message'))
                 else:
                     ping.success = True
             except (IOError, ValueError, Fault, socket.error), e:
-                pass
+                log.exception('error during directory ping %r' % directory_url)
             ping.save()
     return execute_dirs_ping
