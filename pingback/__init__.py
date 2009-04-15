@@ -99,7 +99,7 @@ def create_ping_func(**kwargs):
             raise PingbackError(PingbackError.TARGET_IS_NOT_PINGABLE)
 
         object_resolver = kwargs[name]
-        obj = object_resolver(**kw)
+        obj = object_resolver(*a, **kw)
 
         content_type = ContentType.objects.get_for_model(obj)
         try:
